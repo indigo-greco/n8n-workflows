@@ -197,6 +197,15 @@ const BROWSER_HELPERS = `
       } catch { debug.push({ step: label, ts: Date.now(), screenshotFailed: true }); return null; }
     },
 
+    // Generate a deterministic reference from bill content (no Date.now())
+    // Same bill always produces same hash → prevents duplicate inserts
+    stableRef(provider, amount, dueDate, index) {
+      const input = provider + '|' + (typeof amount === 'number' ? amount.toFixed(2) : String(amount)) + '|' + (dueDate || '') + '|' + index;
+      let h = 0;
+      for (let i = 0; i < input.length; i++) h = ((h << 5) - h + input.charCodeAt(i)) | 0;
+      return provider + '-' + Math.abs(h).toString(36).padStart(6, '0');
+    },
+
     // Detect common error/alert messages on page
     async detectError(page) {
       const errorSels = [
@@ -336,8 +345,9 @@ function getDEHScraperCode(): string {
         // Strategy: scan the page for any elements that look like bill cards,
         // table rows, or list items containing amounts and dates. We cast a
         // wide net because the exact DOM depends on myDEI's current deploy.
-        const bills = await page.evaluate((parseAmount, parseDate) => {
+        const bills = await page.evaluate(() => {
           const results = [];
+          const _ref = (p, amt, d, i) => { const s = p+'|'+(amt||0).toFixed(2)+'|'+(d||'')+'|'+i; let h=0; for(let c=0;c<s.length;c++) h=((h<<5)-h+s.charCodeAt(c))|0; return p+'-'+Math.abs(h).toString(36).padStart(6,'0'); };
 
           // Helper: recursively extract text content, cleaning whitespace
           const text = el => (el?.textContent || '').replace(/\\s+/g, ' ').trim();
@@ -373,7 +383,7 @@ function getDEHScraperCode(): string {
               title: 'Λογαριασμός Ρεύματος ΔΕΗ',
               amount,
               due_date: dueDate || '',
-              reference_number: refMatch ? refMatch[1] : 'DEH-' + Date.now() + '-' + results.length,
+              reference_number: refMatch ? refMatch[1] : _ref('DEH', amount, dueDate, results.length),
               bill_type: 'electricity',
             });
           }
@@ -393,7 +403,7 @@ function getDEHScraperCode(): string {
                       title: obj.title || obj.description || 'Λογαριασμός ΔΕΗ',
                       amount: parseFloat(String(obj.amount).replace(',','.')) || 0,
                       due_date: obj.dueDate || obj.due_date || obj.deadline || '',
-                      reference_number: obj.referenceNumber || obj.reference || obj.id || ('DEH-' + Date.now()),
+                      reference_number: obj.referenceNumber || obj.reference || obj.id || _ref('DEH', parseFloat(String(obj.amount).replace(',','.')) || 0, obj.dueDate || obj.due_date || '', results.length),
                       bill_type: 'electricity',
                     });
                   }
@@ -422,6 +432,7 @@ function getDEHScraperCode(): string {
           // Re-run extraction on this page
           const moreBills = await page.evaluate(() => {
             const results = [];
+            const _ref = (p, amt, d, i) => { const s = p+'|'+(amt||0).toFixed(2)+'|'+(d||'')+'|'+i; let h=0; for(let c=0;c<s.length;c++) h=((h<<5)-h+s.charCodeAt(c))|0; return p+'-'+Math.abs(h).toString(36).padStart(6,'0'); };
             const raw = document.body.innerText || '';
             const lines = raw.split('\\n').map(l => l.trim()).filter(Boolean);
 
@@ -446,7 +457,7 @@ function getDEHScraperCode(): string {
                 title: 'Λογαριασμός Ρεύματος ΔΕΗ',
                 amount,
                 due_date: dueDate,
-                reference_number: 'DEH-' + Date.now() + '-' + results.length,
+                reference_number: _ref('DEH', amount, dueDate, results.length),
                 bill_type: 'electricity',
               });
             }
@@ -632,6 +643,7 @@ function getEYDAPScraperCode(): string {
         debug.push({ step: 'extract_bills' });
         const bills = await page.evaluate(() => {
           const results = [];
+          const _ref = (p, amt, d, i) => { const s = p+'|'+(amt||0).toFixed(2)+'|'+(d||'')+'|'+i; let h=0; for(let c=0;c<s.length;c++) h=((h<<5)-h+s.charCodeAt(c))|0; return p+'-'+Math.abs(h).toString(36).padStart(6,'0'); };
 
           // Strategy A: table rows (EYDAP typically shows bills in a table)
           const tables = document.querySelectorAll('table');
@@ -672,7 +684,7 @@ function getEYDAPScraperCode(): string {
                 title: 'Λογαριασμός Ύδρευσης ΕΥΔΑΠ',
                 amount,
                 due_date: dueDate,
-                reference_number: ref || ('EYDAP-' + Date.now() + '-' + results.length),
+                reference_number: ref || _ref('EYDAP', amount, dueDate, results.length),
                 bill_type: 'water',
               });
             }
@@ -701,7 +713,7 @@ function getEYDAPScraperCode(): string {
                 title: 'Λογαριασμός Ύδρευσης ΕΥΔΑΠ',
                 amount,
                 due_date: dueDate,
-                reference_number: 'EYDAP-' + Date.now() + '-' + results.length,
+                reference_number: _ref('EYDAP', amount, dueDate, results.length),
                 bill_type: 'water',
               });
             }
@@ -886,6 +898,7 @@ function getCOSMOTEScraperCode(): string {
         debug.push({ step: 'extract_bills' });
         const bills = await page.evaluate(() => {
           const results = [];
+          const _ref = (p, amt, d, i) => { const s = p+'|'+(amt||0).toFixed(2)+'|'+(d||'')+'|'+i; let h=0; for(let c=0;c<s.length;c++) h=((h<<5)-h+s.charCodeAt(c))|0; return p+'-'+Math.abs(h).toString(36).padStart(6,'0'); };
           const bodyText = document.body.innerText || '';
 
           // Strategy A: structured elements
@@ -920,7 +933,7 @@ function getCOSMOTEScraperCode(): string {
               title: isInternet ? 'Λογαριασμός Internet COSMOTE' : 'Λογαριασμός Κινητής COSMOTE',
               amount,
               due_date: dueDate,
-              reference_number: refMatch ? refMatch[1] : ('COS-' + Date.now() + '-' + results.length),
+              reference_number: refMatch ? refMatch[1] : _ref('COS', amount, dueDate, results.length),
               bill_type: billType,
             });
           }
@@ -945,7 +958,7 @@ function getCOSMOTEScraperCode(): string {
                 title: 'Λογαριασμός COSMOTE',
                 amount,
                 due_date: dueDate,
-                reference_number: 'COS-' + Date.now() + '-' + results.length,
+                reference_number: _ref('COS', amount, dueDate, results.length),
                 bill_type: 'telecom',
               });
             }
@@ -1129,6 +1142,7 @@ function getAADEScraperCode(): string {
         debug.push({ step: 'extract_bills' });
         const bills = await page.evaluate(() => {
           const results = [];
+          const _ref = (p, amt, d, i) => { const s = p+'|'+(amt||0).toFixed(2)+'|'+(d||'')+'|'+i; let h=0; for(let c=0;c<s.length;c++) h=((h<<5)-h+s.charCodeAt(c))|0; return p+'-'+Math.abs(h).toString(36).padStart(6,'0'); };
 
           // TaxisNet debt info uses HTML tables with installment lines.
           // Known selectors from taxisnet_cp userscript: #installLine, #amnt1, #amnt3
@@ -1183,7 +1197,7 @@ function getAADEScraperCode(): string {
               title: 'Φορολογική Οφειλή ΑΑΔΕ',
               amount,
               due_date: dueDate,
-              reference_number: refMatch ? refMatch[1] : ('AADE-' + Date.now() + '-' + results.length),
+              reference_number: refMatch ? refMatch[1] : _ref('AADE', amount, dueDate, results.length),
               bill_type: billType,
             });
           }
@@ -1203,7 +1217,7 @@ function getAADEScraperCode(): string {
                     title: 'Φορολογική Οφειλή ΑΑΔΕ',
                     amount: amt,
                     due_date: '',
-                    reference_number: 'AADE-' + Date.now(),
+                    reference_number: _ref('AADE', amt, '', results.length),
                     bill_type: 'tax',
                   });
                 }
@@ -1234,7 +1248,7 @@ function getAADEScraperCode(): string {
                 title: 'Οφειλή ΑΑΔΕ',
                 amount,
                 due_date: dueDate,
-                reference_number: 'AADE-' + Date.now() + '-' + results.length,
+                reference_number: _ref('AADE', amount, dueDate, results.length),
                 bill_type: 'tax',
               });
             }
@@ -1470,6 +1484,7 @@ function getEFKAScraperCode(): string {
         debug.push({ step: 'extract_bills' });
         const bills = await page.evaluate(() => {
           const results = [];
+          const _ref = (p, amt, d, i) => { const s = p+'|'+(amt||0).toFixed(2)+'|'+(d||'')+'|'+i; let h=0; for(let c=0;c<s.length;c++) h=((h<<5)-h+s.charCodeAt(c))|0; return p+'-'+Math.abs(h).toString(36).padStart(6,'0'); };
 
           // EFKA portal (JSF) uses standard HTML tables and forms
           const tables = document.querySelectorAll('table');
@@ -1507,7 +1522,7 @@ function getEFKAScraperCode(): string {
                 title: 'Εισφορά e-ΕΦΚΑ',
                 amount,
                 due_date: dueDate,
-                reference_number: rawTexts[0]?.match(/[A-Z0-9-]{4,}/)?.[0] || ('EFKA-' + Date.now() + '-' + results.length),
+                reference_number: rawTexts[0]?.match(/[A-Z0-9-]{4,}/)?.[0] || _ref('EFKA', amount, dueDate, results.length),
                 bill_type: billType,
               });
             }
@@ -1536,7 +1551,7 @@ function getEFKAScraperCode(): string {
                 title: 'Εισφορά e-ΕΦΚΑ',
                 amount,
                 due_date: dueDate,
-                reference_number: 'EFKA-' + Date.now() + '-' + results.length,
+                reference_number: _ref('EFKA', amount, dueDate, results.length),
                 bill_type: 'social_security',
               });
             }
