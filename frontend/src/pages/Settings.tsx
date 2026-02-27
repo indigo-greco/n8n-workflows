@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../lib/auth';
-import type { Profile } from '../lib/types';
+import { supabase } from '../core/supabase';
+import { useAuth } from '../core/auth';
+import type { Profile } from '../core/types';
 import { Save, Check } from 'lucide-react';
 
 export default function Settings() {

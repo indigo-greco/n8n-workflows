@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import type { Provider, ProviderAccount } from '../lib/types';
-import { useAuth } from '../lib/auth';
+import { supabase } from '../core/supabase';
+import type { Provider, ProviderAccount } from '../core/types';
+import { useAuth } from '../core/auth';
 import { Link2, Loader2, RefreshCw, Trash2, Wifi, WifiOff, X } from 'lucide-react';
 
 const ACCOUNT_STATUS_DISPLAY: Record<string, { label: string; color: string }> = {

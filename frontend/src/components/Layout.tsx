@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useAuth } from '../lib/auth';
+import { useAuth } from '../core/auth';
 import { LayoutDashboard, Plug, History, Settings, LogOut } from 'lucide-react';
 
 const NAV_ITEMS = [

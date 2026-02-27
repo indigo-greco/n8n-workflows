@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import type { Bill, ProviderAccount } from '../lib/types';
+import { supabase } from '../core/supabase';
+import type { Bill, ProviderAccount } from '../core/types';
 import { AlertCircle, CheckCircle, Clock, CreditCard, TrendingUp } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {

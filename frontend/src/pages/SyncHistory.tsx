@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import type { SyncJob } from '../lib/types';
+import { supabase } from '../core/supabase';
+import type { SyncJob } from '../core/types';
 import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 
 export default function SyncHistory() {
